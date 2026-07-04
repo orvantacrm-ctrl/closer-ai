@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  STARTER
+  PROFESSIONAL
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum ConversationChannel {
+  SMS
+  CALL
+  WEB
+  EMAIL
+}
+
+enum ConversationStatus {
+  OPEN
+  RESOLVED
+  ESCALATED
+}
+
+enum CallStatus {
+  ANSWERED
+  MISSED
+  RECOVERED
+  VOICEMAIL
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+enum LeadSource {
+  WEBSITE
+  FACEBOOK
+  GOOGLE
+  INSTAGRAM
+  REFERRAL
+  PHONE
+  OTHER
+}
+
+model User {
+  id             String     @id @default(cuid())
+  clerkId        String     @unique
+  email          String     @unique
+  name           String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  businesses     Business[]
+}
+
+model Business {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  industry         String?
+  phone            String?
+  email            String?
+  timezone         String         @default("America/New_York")
+  hoursJson        String         @default("{}")
+  servicesJson     String         @default("[]")
+  aiName           String?
+  aiTone           String         @default("professional")
+  aiScript         String?
+  twilioPhone      String?
+  onboardingDone   Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  subscription     Subscription?
+  customers        Customer[]
+  conversations    Conversation[]
+  calls            Call[]
+  appointments     Appointment[]
+  metrics          DailyMetric[]
+
+  @@index([userId])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  businessId           String             @unique
+  business             Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  plan                 Plan               @default(STARTER)
+  status               SubscriptionStatus @default(TRIALING)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model Customer {
+  id            String         @id @default(cuid())
+  businessId    String
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String?
+  email         String?
+  lastContactAt DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  conversations Conversation[]
+  calls         Call[]
+  appointments  Appointment[]
+
+  @@index([businessId])
+}
+
+model Conversation {
+  id          String              @id @default(cuid())
+  businessId  String
+  business    Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  channel     ConversationChannel
+  status      ConversationStatus  @default(OPEN)
+  subject     String?
+  lastMessage String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  messages    Message[]
+  calls       Call[]
+
+  @@index([businessId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model Call {
+  id              String     @id @default(cuid())
+  businessId      String
+  business        Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  conversationId  String?
+  conversation    Conversation? @relation(fields: [conversationId], references: [id])
+  customerId      String?
+  customer        Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  twilioCallSid   String?    @unique
+  fromNumber      String
+  toNumber        String
+  status          CallStatus
+  durationSeconds Int?
+  transcript      String?
+  intent          String?
+  appointmentBooked Boolean  @default(false)
+  recovered       Boolean    @default(false)
+  recordingUrl    String?
+  createdAt       DateTime   @default(now())
+
+  @@index([businessId])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  businessId  String
+  business    Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  title       String
+  scheduledAt DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([businessId])
+  @@index([scheduledAt])
+}
+
+model DailyMetric {
+  id                  String   @id @default(cuid())
+  businessId          String
+  business            Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  date                DateTime
+  revenueRecovered    Float    @default(0)
+  callsAnswered       Int      @default(0)
+  missedCallsRecovered Int     @default(0)
+  appointmentsBooked  Int      @default(0)
+  leadsConverted      Int      @default(0)
+  reviewsGenerated    Int      @default(0)
+
+  @@unique([businessId, date])
+  @@index([businessId])
+}
