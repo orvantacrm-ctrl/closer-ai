@@ -40,7 +40,7 @@ export function BillingClient({
     }
 
     if (data.url) {
-      window.location.href = data.url;
+      window.location.assign(data.url);
     }
   }
 

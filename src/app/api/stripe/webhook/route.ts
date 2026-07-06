@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       const stripeSubscriptionId =
         typeof session.subscription === "string"
           ? session.subscription
-          : (session.subscription as any)?.id || undefined;
+          : (session.subscription as Stripe.Subscription)?.id || undefined;
 
       console.log("[stripe webhook] checkout.session.completed", {
         clerkId,

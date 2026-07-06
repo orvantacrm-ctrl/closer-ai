@@ -15,6 +15,15 @@ import { db } from "@/lib/db";
 import { getDashboardMetrics } from "@/lib/services/metrics";
 import { formatCurrency } from "@/lib/utils";
 
+function getTrialDaysLeft(trialEndsAt?: Date | null) {
+  if (!trialEndsAt) return null;
+  const now = Date.now();
+  return Math.max(
+    0,
+    Math.ceil((trialEndsAt.getTime() - now) / (1000 * 60 * 60 * 24)),
+  );
+}
+
 export default async function DashboardPage() {
   const business = await requireBusiness();
   const metrics = await getDashboardMetrics(business.id);
@@ -37,14 +46,7 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const trialDaysLeft = business.subscription?.trialEndsAt
-    ? Math.max(
-        0,
-        Math.ceil(
-          (business.subscription.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-        )
-      )
-    : null;
+  const trialDaysLeft = getTrialDaysLeft(business.subscription?.trialEndsAt);
 
   return (
     <div className="space-y-6">

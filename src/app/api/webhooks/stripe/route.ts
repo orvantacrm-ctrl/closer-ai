@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       const stripeSubscriptionId =
         typeof session.subscription === "string"
           ? session.subscription
-          : session.subscription?.id;
+          : (session.subscription as Stripe.Subscription)?.id;
 
       console.log("[stripe webhook] checkout.session.completed", {
         businessId,
@@ -116,9 +116,12 @@ export async function POST(request: Request) {
         unpaid: "PAST_DUE",
       };
       const newStatus = statusMap[subscription.status] ?? "CANCELED";
+      const subscriptionWithCurrentPeriod = subscription as unknown as {
+        current_period_end?: number;
+      };
       const currentPeriodEnd =
-        (subscription as any).current_period_end != null
-          ? new Date((subscription as any).current_period_end * 1000)
+        subscriptionWithCurrentPeriod.current_period_end != null
+          ? new Date(subscriptionWithCurrentPeriod.current_period_end * 1000)
           : null;
 
       console.log(`[stripe webhook] ${event.type}`, {
