@@ -59,7 +59,11 @@ export async function POST(request: Request) {
 		});
 
 		const user = await getOrCreateUser();
-		const business = await getOrCreateBusiness(user.id);
+if (!user) {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+const business = await getOrCreateBusiness(user.id);
 		console.log("[stripe/checkout] clerk user id", user.clerkId);
 		console.log("[stripe/checkout] business used for checkout", {
 			businessId: business.id,

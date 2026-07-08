@@ -16,9 +16,7 @@ export async function getCurrentUser(): Promise<User | null> {
   return db.user.findUnique({ where: { clerkId: userId } });
 }
 
-export async function getOrCreateUser(
-  clerkUser?: Awaited<ReturnType<typeof currentUser>>,
-): Promise<User> {
+export async function getOrCreateUser(...): Promise<User | null>
   if (!process.env.CLERK_SECRET_KEY || !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     const existingUser = await db.user.findUnique({ where: { clerkId: ANONYMOUS_USER_ID } });
     if (existingUser) return existingUser;
